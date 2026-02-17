@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { list } from '@vercel/blob';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;  // Récupère l'id de l'URL (ex: "test")
-    const prefix = `memorials/${id}/`;  // Chemin dans Blob
+    // NOUVEAU : récupère id avec await (App Router 14+)
+    const params = await context.params;
+    const { id } = params;
+    
+    console.log(`🔍 ID reçu: "${id}"`);
+    const prefix = `memorials/${id}/`;
+    
+    console.log(`🔍 Recherche dans: "${prefix}"`);
 
-    console.log(`🔍 Recherche images pour ${id} dans ${prefix}`);
-
-    // Liste TOUS les fichiers dans ce "dossier"
+    // Liste les fichiers
     const { blobs } = await list({ prefix });
 
-    // Transforme en format simple
     const images = blobs.map((blob) => ({
-      url: blob.url,           // URL publique pour afficher l'image
-      pathname: blob.pathname, // Chemin complet (ex: memorials/test/123.jpg)
-      uploadedAt: blob.uploadedAt, // Quand uploadé
-      size: blob.size,         // Taille en octets
+      url: blob.url,
+      pathname: blob.pathname,
+      uploadedAt: blob.uploadedAt,
     }));
 
     console.log(`✅ ${images.length} images trouvées`);
@@ -27,18 +26,13 @@ export async function GET(
     return NextResponse.json({
       success: true,
       count: images.length,
+      id,
       prefix,
       images,
     });
 
   } catch (error) {
-    console.error('❌ Erreur listage:', error);
-    return NextResponse.json(
-      { 
-        error: 'Erreur lors du listage des images',
-        details: error instanceof Error ? error.message : 'Inconnu'
-      },
-      { status: 500 }
-    );
+    console.error('❌ Erreur:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
