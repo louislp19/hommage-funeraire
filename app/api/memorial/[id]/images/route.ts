@@ -3,16 +3,12 @@ import { list } from '@vercel/blob';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    // NOUVEAU : récupère id avec await (App Router 14+) cool
     const params = await context.params;
     const { id } = params;
     
     console.log(`🔍 ID reçu: "${id}"`);
     const prefix = `memorials/${id}/`;
     
-    console.log(`🔍 Recherche dans: "${prefix}"`);
-
-    // Liste les fichiers
     const { blobs } = await list({ prefix });
 
     const images = blobs.map((blob) => ({
@@ -20,8 +16,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       pathname: blob.pathname,
       uploadedAt: blob.uploadedAt,
     }));
-
-    console.log(`✅ ${images.length} images trouvées`);
 
     return NextResponse.json({
       success: true,
@@ -33,6 +27,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
   } catch (error) {
     console.error('❌ Erreur:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Erreur inconnue' 
+    }, { status: 500 });
   }
 }
