@@ -1,48 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { list } from '@vercel/blob';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const formData = await request.formData();
-    const memorialId = formData.get('memorialId') as string;
-    const files = formData.getAll('files') as File[];
+    // NOUVEAU : récupère id avec await (App Router 14+)
+    const params = await context.params;
+    const { id } = params;
+    
+    console.log(`🔍 ID reçu: "${id}"`);
+    const prefix = `memorials/${id}/`;
+    
+    console.log(`🔍 Recherche dans: "${prefix}"`);
 
-    if (!memorialId) {
-      return NextResponse.json({ error: 'ID du défunt manquant' }, { status: 400 });
-    }
+    // Liste les fichiers
+    const { blobs } = await list({ prefix });
 
-    if (files.length === 0) {
-      return NextResponse.json({ error: 'Aucune photo sélectionnée' }, { status: 400 });
-    }
+    const images = blobs.map((blob) => ({
+      url: blob.url,
+      pathname: blob.pathname,
+      uploadedAt: blob.uploadedAt,
+    }));
 
-    const uploads = await Promise.all(
-      files.map(async (file) => {
-        const timestamp = Date.now();
-        const pathname = `memorials/${memorialId}/${timestamp}-${file.name}`;
-        
-        const blob = await put(pathname, file, {
-          access: 'public',
-        });
-        
-        return {
-          url: blob.url,
-          pathname: blob.pathname,
-          name: file.name,
-        };
-      })
-    );
+    console.log(`✅ ${images.length} images trouvées`);
 
     return NextResponse.json({
       success: true,
-      message: `✅ ${uploads.length} photo(s) uploadées avec succès !`,
-      uploads,
+      count: images.length,
+      id,
+      prefix,
+      images,
     });
 
   } catch (error) {
-    console.error('Erreur upload:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur lors de l’upload des photos' },
-      { status: 500 }
-    );
+    console.error('❌ Erreur:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
