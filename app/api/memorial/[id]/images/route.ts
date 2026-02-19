@@ -3,7 +3,7 @@ import { list } from '@vercel/blob';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    // NOUVEAU : récupère id avec await (App Router 14+)
+    // NOUVEAU : récupère id avec await (App Router 14+) cool
     const params = await context.params;
     const { id } = params;
     
